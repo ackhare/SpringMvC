@@ -1,0 +1,245 @@
+A)http://stackoverflow.com/questions/1965454/showing-a-spring-transaction-in-log
+
+1)
+
+in your log4j.properties (for alternative loggers, or log4j's xml format, check the docs)
+
+Depending on your transaction manager, you can set the logging level of the spring framework
+so that it gives you more info about transactions. For example, in case of using JpaTransactionManager, you set
+
+log4j.logger.org.springframework.orm.jpa=INFO
+
+(this is the package of the your transaction manager), and also
+
+log4j.logger.org.springframework.transaction=INFO
+
+If INFO isn't enough, use DEBUG
+
+
+2)
+
+
+
+For me, a good logging config to add was:
+
+    log4j.logger.org.springframework.transaction.interceptor = trace
+
+It will show me log like that:
+
+    2012-08-22 18:50:00,031 TRACE - Getting transaction for [com.MyClass.myMethod]
+
+    [my own log statements from method com.MyClass.myMethod]
+
+    2012-08-22 18:50:00,142 TRACE - Completing transaction for [com.MyClass.myMethod]
+
+3)log4j.logger.org.springframework.jdbc=DEBUG
+
+
+B)
+http://stackoverflow.com/questions/11985954/enabling-complete-path-logging-in-spring-mvc
+
+
+ts very simple to log the execution of program :
+
+1) Add log4j dependency in pom.xml
+
+<dependency>
+    <groupId>org.slf4j</groupId>
+    <artifactId>slf4j-log4j12</artifactId>
+    <version>1.4.2</version>
+</dependency>
+
+2) Add the one Listner class in web.xml
+
+<listener>
+    <listener-class>org.springframework.web.util.Log4jConfigListener</listener-class>
+</listener>
+
+3) Then add log4jConfigLocation in web.xml
+
+<context-param>
+    <param-name>log4jConfigLocation</param-name>
+    <param-value>/WEB-INF/classes/log4j.properties</param-value>
+</context-param>
+
+and then add your log4j properties as follows :
+
+# Direct log messages to a log file
+log4j.appender.file=org.apache.log4j.RollingFileAppender
+log4j.appender.file.File=C:\\loging.log
+log4j.appender.file.MaxFileSize=1MB
+log4j.appender.file.MaxBackupIndex=1
+log4j.appender.file.layout=org.apache.log4j.PatternLayout
+log4j.appender.file.layout.ConversionPattern=%d{ABSOLUTE} %5p %c{1}:%L - %m%n
+
+# Direct log messages to stdout
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.Target=System.out
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=%d{ABSOLUTE} %5p %c{1}:%L - %m%n
+
+# Root logger option
+log4j.rootLogger=debug, file, stdout
+
+4) Go to the particular java file in your application import log4j package and then implement your logging mechanism
+
+5) Now you should be able to trace the log
+
+
+
+C)
+
+http://stackoverflow.com/questions/32023060/how-to-configure-logback-under-spring
+
+
+
+As orid pointed out, the official way to use Logback in Spring is with the Logback Spring extension.(https://github.com/qos-ch/logback-extensions/wiki/Spring)
+
+The really cool thing is that the Logback Spring extension starts before Spring or
+ the servlet and stores log messages until the Appenders are configured.
+ (Simple appenders will be available immediately, while those that need Spring are
+  proxied through DelegatingLogbackAppender).
+
+In addition it allows you to:
+
+    Use SLF4J's java.util.logging bridge.
+    Specify the logback.xml location using a Spring resource path and system property placeholders.
+    Use the pre-set system property webapp.root (path to unpacked WAR directory) inside the logback.xml for setting log file paths, etc.
+
+
+E)
+
+
+In one of our projects, we had coded it like this:
+
+import java.io.IOException;
+
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Component;
+
+import ch.qos.logback.classic.LoggerContext;
+import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.core.joran.spi.JoranException;
+import ch.qos.logback.core.util.StatusPrinter;
+
+@Component
+public class InitializationService implements ApplicationListener<ContextRefreshedEvent> {
+
+    @Value("${logbackErrorMailPassword}")
+    private String logbackErrorMailPassword;
+
+    @Value("${supportEmail}")
+    private String supportEmail;
+
+    @Value("${spring.profiles.active}")
+    private String env;
+
+    @Value("${log.dir}")
+    private String logDir;
+
+    @Value("${log.name}")
+    private String logName;
+
+    @Override
+    public void onApplicationEvent(ContextRefreshedEvent event) {
+
+        try {
+            configureLogback();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+    private void configureLogback() throws IOException {
+
+        // assume SLF4J is bound to logback in the current environment
+        LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+        try {
+            JoranConfigurator jc = new JoranConfigurator();
+            jc.setContext(context);
+            context.reset(); // override default configuration
+            // inject the name of the current application as "application-name"
+            // property of the LoggerContext
+            context.putProperty("LOG_DIR", logDir);
+            context.putProperty("LOG_NAME", logName);
+
+            context.putProperty("ERROR_MAIL_PASSWORD", logbackErrorMailPassword);
+            context.putProperty("SUPPORT_EMAIL_ID", supportEmail);
+            context.putProperty("ENV", env);
+            //jc .doConfigure(servletContext.getRealPath("/WEB-INF/my-logback.xml"));
+            jc.doConfigure(new ClassPathResource("my-logback.xml").getInputStream());
+        } catch (JoranException je) {
+              // StatusPrinter will handle this
+        }
+        StatusPrinter.printInCaseOfErrorsOrWarnings(context);
+
+    }
+}
+
+
+
+
+my-logback.xml was residing at src/main/resources, looking like this:
+
+<configuration debug="true" scan="true" scanPeriod="10 minutes">
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <Pattern>%date %level [%thread] %logger %msg%n</Pattern>
+        </encoder>
+    </appender>
+    <appender name="ROLLING" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${LOG_DIR}${LOG_NAME}.log</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+          <FileNamePattern>
+           ${LOG_DIR}${LOG_NAME}-%d.%i.log.gz
+          </FileNamePattern>
+          <TimeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+            <MaxFileSize>10MB</MaxFileSize>
+          </TimeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <encoder>
+          <Pattern>%date %level [%thread] %logger %msg%n</Pattern>
+        </encoder>
+    </appender>
+    <appender name="EMAIL" class="ch.qos.logback.classic.net.SMTPAppender">
+        <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+            <!-- deny all events with a level below ERROR -->
+            <level>ERROR</level>
+        </filter>
+
+        <smtpHost>xxxxxx.bluehost.com</smtpHost>
+        <smtpPort>465</smtpPort>
+        <username>xxxxxxx+xxxxx.com</username>
+        <password>${ERROR_MAIL_PASSWORD}</password>
+        <SSL>true</SSL>
+
+        <to>${SUPPORT_EMAIL_ID}</to>
+        <!-- Multiple to elements are permitted -->
+
+        <from>xxxxx@xxxxx.com</from>
+        <subject>[${ENV}] ERROR in ${LOG_NAME}</subject>
+        <cyclicBufferTracker class="ch.qos.logback.core.spi.CyclicBufferTracker">
+              <bufferSize>1</bufferSize>
+        </cyclicBufferTracker>
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <pattern>%date %-5level %logger{35} - %message%n</pattern>
+        </layout>
+    </appender>
+    <logger name="javax.net" level="info"/>
+    <logger name="javax.management" level="info"/>
+    <logger name="org.springframework" level="info"/>
+    <logger name="org.compass" level="info"/>
+    <logger name="org.tuckey" level="info"/>
+    <root level="info">
+        <appender-ref ref="CONSOLE" />
+        <appender-ref ref="ROLLING" />
+        <appender-ref ref="EMAIL" />
+    </root>
+
+</configuration>
+

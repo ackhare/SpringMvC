@@ -1,0 +1,86 @@
+1)extend AbstractAnnotationConfigDispatcherServletInitializer which register a
+ DispatcherServlet configured with annotated classes, e.g. Spring's @Configuration classes.
+
+ Here we defined three methods which are compulsary to override
+ a)getServletMappings()-->Specify the servlet mapping(s) for the DispatcherServlet
+ b)getRootConfigClasses()--->In this we will put things which are not part of web like services , hiberenate
+ configuration s and blah blah
+ c)getServletConfigClasses-->Here all web component will be kept like jsp rtesources , controleers , images etc
+
+2)Then in config folder we have 3 files
+
+a)HibernateConfig--> hibernate confioguration
+b)SpringRootConfig-->set up componentscan for services so that it can be autowired
+c)SpringWebConfig extend WebMvcConfigurerAdapter--->no method is compulsary but resourceHandler
+needs to be rergistred to tell the location of resources
+The below line will scan all controllers ready to be preszent as beans
+@ComponentScan("com.nexthoughts.spring.mvc.demo.web")
+
+<context:annotation-config> is used to activate annotations in beans already registered in
+ the application context (no matter if they were defined with XML or by package scanning).
+
+<context:component-scan> can also do what <context:annotation-config> does but
+ <context:component-scan> also scans packages to find and register beans within the application context
+
+Two beans one for viewResolver and one for message.properties
+
+3)HibernateConfig is annotated with @Configuration, @EnableTransactionManagement. @PropertySource(to tell the
+location of
+ hibernate.proprties)  . This also has two @Bean methods for crerating sessionfactory and datasource using
+ DriverManagerDataSource(spring-jdbc) and LocalSessionFactory(spring-orm)
+ It also has a method called  HibernateTransactionManager transactionManager(spring-orm) to set session factory
+
+4)Now comong to controllers
+
+1)WelcomeController -->
+
+Each controller will have these annotation @Controller, @RequestMapping(value = "/")(tells the url)
+Then is injected WelcomeService
+
+2)WelcomeService ---> using costructor injection WelcomeService is autowired
+It should be noted that services are component scan in SpringRootConfig (@ComponentScan)
+Sessionfactory is already injected in Hibernateconfig annotated as @Bean in Hibernateconfig
+This is being loaded by hibernateTransactionManager which loads datasource which in turn loads sessionfacxtorey
+
+1)cont.(WelcomeController)
+Now ModelAndView is uset to set view and to send any object on view
+
+ModelAndView model = new ModelAndView();
+model.setViewName("index");
+
+Now @RequestMapping(value = {"/"}, method = RequestMethod.GET) is also put above the method
+
+In ViewResolver where we give jsp as template . In the same method we give location of jsps
+
+ viewResolver.setViewClass(JstlView.class);
+ viewResolver.setPrefix("/WEB-INF/views/jsp/");
+ viewResolver.setSuffix(".jsp");
+
+3)StudentController
+
+First here we autowire constructor with Studentservice
+
+a)StudentService
+
+The reason why studentController is autowired via constructor injection is to
+
+
+ instantiate service becaue service is used in controller action methods
+
+
+     @Autowired
+        // construcetor injection
+    StudentController(StudentService studentService) {
+        this.studentService = studentService;
+    }
+
+ This is same as using session factory in service to instantiate session factory in service
+  @Autowired
+     public StudentService(SessionFactory sessionFactory) {
+         this.sessionFactory = sessionFactory;
+     }
+
+
+
+
+

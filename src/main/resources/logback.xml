@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <withJansi>true</withJansi>
+
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>
+                <!--[%thread] %highlight(%-5level) %cyan(%logger{15}) - %msg %n-->
+                %C{20} | %level | [%thread] | %msg %n %n
+            </Pattern>
+        </layout>
+    </appender>
+    <appender name="logfile" class="ch.qos.logback.core.FileAppender">
+        <file>myapp.log</file>
+        <append>true</append>
+        <encoder>
+            <!--gave a line more for clear logs-->
+            <pattern>%C | %-5level [%thread] %logger{10} [%file:%line] %msg%n %n</pattern>
+        </encoder>
+    </appender>
+    <!--<logger name="com.github.isrsal.logging.LoggingFilter">-->
+    <!--<level value="DEBUG"/>-->
+    <!--</logger>-->
+    <logger name="org.springframework" level="error" additivity="false">
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="logfile"/>
+    </logger>
+
+    <logger name="com.nexthoughts.spring.mvc.demo" level="info" additivity="false">
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="logfile"/>
+    </logger>
+
+    <root level="error">
+        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="logfile"/>
+    </root>
+
+</configuration>
