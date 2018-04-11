@@ -7,3 +7,5 @@ and there the component scan which is mainly the controller package , putit ther
 Can be used mainly with {@ExceptionHandler(FileNotFoundException.class)}
 in rest based spring services where you need to return a specfic status code and
 message which is more of override
+
+https://www.concretepage.com/spring/spring-mvc/spring-mvc-controlleradvice-annotation-example
