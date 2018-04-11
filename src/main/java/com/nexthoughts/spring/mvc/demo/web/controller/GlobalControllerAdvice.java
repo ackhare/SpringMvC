@@ -22,6 +22,8 @@ public class GlobalControllerAdvice {
         model.addAttribute("msg", "Welcome to My World!");
     }
 
+
+    //    @ResponseStatus(value= HttpStatus.NOT_FOUND, reason="IOException occured")
     @ExceptionHandler(FileNotFoundException.class)
     public ModelAndView myError(Exception exception) {
         ModelAndView mav = new ModelAndView();
